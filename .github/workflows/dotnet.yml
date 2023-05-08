@@ -1,0 +1,26 @@
+name: .NET
+
+on: push
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 5
+
+    - name: Build
+      run: dotnet build -p:Configuration=Release -p:Platform=x86 -p:DebugSymbols=false -p:DebugType=None
+
+    - name: Release 
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ./bin/x86/Release/SharpWxDump.exe
