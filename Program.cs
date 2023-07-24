@@ -24,7 +24,24 @@ namespace WeChatGetKey
 			}
 			Console.WriteLine("[+] Done");
 		}
-		private static void ReadTest()
+        private static bool IsNullOrWhiteSpace(string value)
+        {
+            if (value == null)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (!char.IsWhiteSpace(value[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        private static void ReadTest()
 		{
 			List<int> SupportList = null;
 			Process WeChatProcess = null;
@@ -56,7 +73,7 @@ namespace WeChatGetKey
 				{
 					Int64 WeChatKey = (Int64)Program.WeChatWinBaseAddress + SupportList[4];
 					string HexKey = Program.GetHex(WeChatProcess.Handle, (IntPtr)WeChatKey);
-					if (string.IsNullOrWhiteSpace(HexKey))
+					if (IsNullOrWhiteSpace(HexKey))
 					{
 						Console.WriteLine("[-] WeChat Is Run, But Maybe No Login");
 						return;
@@ -67,7 +84,7 @@ namespace WeChatGetKey
 						Console.WriteLine("[+] WeChatName: " + Program.GetName(WeChatProcess.Handle, (IntPtr)WeChatName, 100));
 						Int64 WeChatAccount = (Int64)Program.WeChatWinBaseAddress + SupportList[1];
 						string Account = Program.GetMobile(WeChatProcess.Handle, (IntPtr)WeChatAccount);
-						if (string.IsNullOrWhiteSpace(Account))
+						if (IsNullOrWhiteSpace(Account))
 						{
 							Console.WriteLine("[-] WeChatAccount: Maybe User Is No Set Account");
 						}
@@ -77,7 +94,7 @@ namespace WeChatGetKey
 						}
 						Int64 WeChatMobile = (Int64)Program.WeChatWinBaseAddress + SupportList[2];
 						string Mobile = Program.GetMobile(WeChatProcess.Handle, (IntPtr)WeChatMobile);
-						if (string.IsNullOrWhiteSpace(Mobile))
+						if (IsNullOrWhiteSpace(Mobile))
 						{
 							Console.WriteLine("[-] WeChatMobile: Maybe User Is No Binding Mobile");
 						}
@@ -87,7 +104,7 @@ namespace WeChatGetKey
 						}
 						Int64 WeChatMail = (Int64)Program.WeChatWinBaseAddress + SupportList[3];
 						string Mail = Program.GetMail(WeChatProcess.Handle, (IntPtr)WeChatMail);
-						if (string.IsNullOrWhiteSpace(Mail) != false) { }
+						if (IsNullOrWhiteSpace(Mail) != false) { }
 						else
 						{
 							Console.WriteLine("[+] WeChatMail: " + Program.GetMail(WeChatProcess.Handle, (IntPtr)WeChatMail, 100));
