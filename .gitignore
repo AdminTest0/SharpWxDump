@@ -1,0 +1,16 @@
+cd /path/to/project
+touch .gitignore  # 创建.gitignore文件，如果已存在可省略此步
+# 忽略logs目录
+dist/
+# 忽略所有的.class文件
+*.class
+# 忽略.idea目录
+.idea/
+# 忽略所有的.iml文件
+*.iml
+
+.git/
+__pycache__/
+
+# 忽略secret.txt文件
+secret.txt
