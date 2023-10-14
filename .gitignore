@@ -8,7 +8,6 @@ dist/
 .idea/
 # 忽略所有的.iml文件
 *.iml
-
 .git/
 __pycache__/
 
